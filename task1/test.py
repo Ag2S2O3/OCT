@@ -21,8 +21,8 @@ def main(model_path):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # 读取数据
-    test_dir = r'C:\Users\HMRda\Desktop\pytorch\task1\test\img'
-    result_dir = r'C:\Users\HMRda\Desktop\pytorch\task1\test\res'
+    test_dir = r'C:\Users\HMRda\Desktop\pytorch\OCT\task1\test\img'
+    result_dir = r'C:\Users\HMRda\Desktop\pytorch\OCT\task1\test\res'
 
     # 读取文件夹中的每个文件夹
     folder = os.listdir(test_dir)
@@ -90,5 +90,5 @@ def main(model_path):
 
 if __name__ == '__main__':
     main(
-        r'C:\Users\HMRda\Desktop\pytorch\task1\trained\RU_Net_512\checkpoint_best.pth'
+        r'C:\Users\HMRda\Desktop\pytorch\OCT\task1\trained\RU_Net_512\checkpoint_best.pth'
     )

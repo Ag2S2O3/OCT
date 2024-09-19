@@ -5,3 +5,4 @@ task1/test/
 task1/trained/
 task2/train/*
 !task2/train/*.py
+task1/parameter
