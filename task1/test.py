@@ -7,6 +7,7 @@ from PIL import Image
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 
 # 形态学运算
 def opening_closing(img):

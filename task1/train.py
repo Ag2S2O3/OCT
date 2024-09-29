@@ -81,8 +81,8 @@ def main(args):
         ToTensorV2(),   # 仅数据转换，不会除以255
     ],additional_targets={'mask': 'mask'})  # 验证集
 
-    train_set = OCT_Dataset(r'data\train_data',train_transform)
-    valid_set = OCT_Dataset(r'data\valid_data',valid_transform)
+    train_set = OCT_Dataset(r'C:\Users\HMRda\Desktop\pytorch\OCT\task1\data\train_data',train_transform)
+    valid_set = OCT_Dataset(r'C:\Users\HMRda\Desktop\pytorch\OCT\task1\data\valid_data',valid_transform)
 
     # 构建DataLoader
     train_loader = DataLoader(dataset=train_set, batch_size=args.batch_size, shuffle=True, num_workers=args.workers)
@@ -94,6 +94,7 @@ def main(args):
         encoder_weights='imagenet',   # 使用预训练权重
         in_channels=1,  # 单通道图像
         classes=1,  # 只有一类
+        decoder_attention_type="CA", # CA注意力机制
         )
     model.to(device)    
 
@@ -170,5 +171,15 @@ if __name__ == "__main__":
     args = get_args_parser().parse_args()
     setup_seed(args.random_seed)
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    main(args)
+    # main(args)
+    model = smp.Unet(
+        encoder_name=args.encoder,  # 指定编码器
+        encoder_weights='imagenet',   # 使用预训练权重
+        in_channels=1,  # 单通道图像
+        classes=1,  # 只有一类
+        decoder_attention_type="CA", # CA注意力机制
+        )
+    img_tensor = torch.randn(1, 1, 512, 512)  # 批量大小为 1，1 通道，512x512 像素
+    writer = SummaryWriter('runs/simple_model_experiment')
+    writer.add_graph(model, img_tensor)
     
