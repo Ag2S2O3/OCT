@@ -10,7 +10,7 @@ import epoch as ep
 import os
 import numpy as np
 import random
-
+import TransferLearning as TrL
 
 # 使用命令行管理模型配置
 def get_args_parser(add_help=True):
@@ -23,16 +23,16 @@ def get_args_parser(add_help=True):
     parser.add_argument("--device", default="cuda", type=str, help="device (Use cuda or cpu Default: cuda)")
     # 训练超参数
     parser.add_argument(
-        "-b", "--batch-size", default=8, type=int, help="images per gpu, the total batch size is $NGPU x batch_size"
+        "-b", "--batch-size", default=24, type=int, help="images per gpu, the total batch size is $NGPU x batch_size"
     ) # 每个 GPU 的 batch 大小，用于控制每次训练中处理的数据量。该大小会影响模型的性能和显存使用
     parser.add_argument("--epochs", default=60, type=int, metavar="N", help="number of total epochs to run") # 总训练轮数
     parser.add_argument(
-        "-j", "--workers", default=0, type=int, metavar="N", help="number of data loading workers (default: 1)"
+        "-j", "--workers", default=2, type=int, metavar="N", help="number of data loading workers (default: 1)"
     ) # 定义数据加载时使用的并行线程数，用来加快数据读取的速度
     # 优化器和学习率设置
     parser.add_argument("--opt", default="sgd", type=str, help="optimizer") # 指定优化器类型
     parser.add_argument("--random-seed", default=42, type=int, help="random seed")  
-    parser.add_argument("--lr", default=0.01, type=float, help="initial learning rate") # 初始学习率, 决定了每次参数更新的步长
+    parser.add_argument("--lr", default=0.1, type=float, help="initial learning rate") # 初始学习率, 决定了每次参数更新的步长
     parser.add_argument("--momentum", default=0.9, type=float, metavar="M", help="momentum")    # 用于动量优化器的参数, 帮助在更新过程中平滑梯度
     parser.add_argument(
         "--wd",
@@ -66,7 +66,7 @@ def main(args):
     # 设置日志
     writer = SummaryWriter(log_dir = result_dir)
     # 数据增广
-    PATCH_SIZE = 512 # 图像大小
+    PATCH_SIZE = 256 # 图像大小
     train_transform = A.Compose([
         A.Resize(width=PATCH_SIZE, height=PATCH_SIZE),
         A.HorizontalFlip(p=0.5),
@@ -89,13 +89,7 @@ def main(args):
     valid_loader = DataLoader(dataset=valid_set, batch_size=args.batch_size, num_workers=args.workers)
 
     # 构建模型
-    model = smp.Unet(
-        encoder_name=args.encoder,  # 指定编码器
-        encoder_weights='imagenet',   # 使用预训练权重
-        in_channels=1,  # 单通道图像
-        classes=1,  # 只有一类
-        decoder_attention_type="CA", # CA注意力机制
-        )
+    model = TrL.ResUNet()
     model.to(device)    
 
     # 选择损失函数
@@ -171,15 +165,10 @@ if __name__ == "__main__":
     args = get_args_parser().parse_args()
     setup_seed(args.random_seed)
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # main(args)
-    model = smp.Unet(
-        encoder_name=args.encoder,  # 指定编码器
-        encoder_weights='imagenet',   # 使用预训练权重
-        in_channels=1,  # 单通道图像
-        classes=1,  # 只有一类
-        decoder_attention_type="CA", # CA注意力机制
-        )
-    img_tensor = torch.randn(1, 1, 512, 512)  # 批量大小为 1，1 通道，512x512 像素
-    writer = SummaryWriter('runs/simple_model_experiment')
-    writer.add_graph(model, img_tensor)
+    main(args)
+    # model = RU.UNetWithResNetEncoder(bilinear = False,
+    #     )   
+    # img_tensor = torch.randn(1, 1, 512, 512)  # 批量大小为 1，1 通道，512x512 像素
+    # writer = SummaryWriter('runs/simple_model_experiment')
+    # writer.add_graph(model, img_tensor)
     

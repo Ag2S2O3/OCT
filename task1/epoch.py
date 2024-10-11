@@ -71,8 +71,6 @@ class Epoch(object):
 
                 # 计算指标（miou）
                 outputs = (outputs.sigmoid() > 0.5).float() 
-                print("Output min: ", outputs.min())
-                print("Output max: ", outputs.max())
 
                 labels = labels.unsqueeze(dim=1)
                 tp, fp, fn, tn = smp.metrics.get_stats(outputs.long(), labels, mode="binary")
