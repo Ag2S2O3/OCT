@@ -12,6 +12,9 @@ import numpy as np
 import random
 import TransferLearning as TrL
 
+# 时间序列长度
+sq = 5
+
 # 使用命令行管理模型配置
 def get_args_parser(add_help=True):
     import argparse
@@ -23,15 +26,15 @@ def get_args_parser(add_help=True):
     parser.add_argument("--device", default="cuda", type=str, help="device (Use cuda or cpu Default: cuda)")
     # 训练超参数
     parser.add_argument(
-        "-b", "--batch-size", default=24, type=int, help="images per gpu, the total batch size is $NGPU x batch_size"
+        "-b", "--batch-size", default=4, type=int, help="images per gpu, the total batch size is $NGPU x batch_size"
     ) # 每个 GPU 的 batch 大小，用于控制每次训练中处理的数据量。该大小会影响模型的性能和显存使用
-    parser.add_argument("--epochs", default=60, type=int, metavar="N", help="number of total epochs to run") # 总训练轮数
+    parser.add_argument("--epochs", default=100, type=int, metavar="N", help="number of total epochs to run") # 总训练轮数
     parser.add_argument(
         "-j", "--workers", default=2, type=int, metavar="N", help="number of data loading workers (default: 1)"
     ) # 定义数据加载时使用的并行线程数，用来加快数据读取的速度
     # 优化器和学习率设置
     parser.add_argument("--opt", default="sgd", type=str, help="optimizer") # 指定优化器类型
-    parser.add_argument("--random-seed", default=42, type=int, help="random seed")  
+    parser.add_argument("--random-seed", default=47, type=int, help="random seed")  
     parser.add_argument("--lr", default=0.1, type=float, help="initial learning rate") # 初始学习率, 决定了每次参数更新的步长
     parser.add_argument("--momentum", default=0.9, type=float, metavar="M", help="momentum")    # 用于动量优化器的参数, 帮助在更新过程中平滑梯度
     parser.add_argument(
@@ -60,6 +63,7 @@ def get_args_parser(add_help=True):
 
 def main(args):
     best_miou = 0.0
+    best_epoch = -1
     # 选择设备
     device = args.device
     result_dir = args.output_dir
@@ -69,11 +73,11 @@ def main(args):
     PATCH_SIZE = 256 # 图像大小
     train_transform = A.Compose([
         A.Resize(width=PATCH_SIZE, height=PATCH_SIZE),
-        A.HorizontalFlip(p=0.5),
-        A.VerticalFlip(p=0.5),
-        A.RandomRotate90(p=0.5),
-        A.Transpose(p=0.5),
-        A.ShiftScaleRotate(shift_limit=0.01, scale_limit=0.04, rotate_limit=0, p=0.25),
+        # A.HorizontalFlip(p=0.5),
+        # A.VerticalFlip(p=0.5),
+        # A.RandomRotate90(p=0.5),
+        # A.Transpose(p=0.5),
+        # A.ShiftScaleRotate(shift_limit=0.01, scale_limit=0.04, rotate_limit=0, p=0.25),
         ToTensorV2(),
     ],additional_targets={'mask': 'mask'})   # 训练集
     valid_transform = A.Compose([
@@ -81,15 +85,17 @@ def main(args):
         ToTensorV2(),   # 仅数据转换，不会除以255
     ],additional_targets={'mask': 'mask'})  # 验证集
 
-    train_set = OCT_Dataset(r'C:\Users\HMRda\Desktop\pytorch\OCT\task1\data\train_data',train_transform)
-    valid_set = OCT_Dataset(r'C:\Users\HMRda\Desktop\pytorch\OCT\task1\data\valid_data',valid_transform)
+    train_set = OCT_Dataset(r'C:\Users\HMRda\Desktop\pytorch\OCT\task1\data\train_data',train_transform,sequence_length=sq)
+    valid_set = OCT_Dataset(r'C:\Users\HMRda\Desktop\pytorch\OCT\task1\data\valid_data',valid_transform,sequence_length=sq)
 
     # 构建DataLoader
     train_loader = DataLoader(dataset=train_set, batch_size=args.batch_size, shuffle=True, num_workers=args.workers)
     valid_loader = DataLoader(dataset=valid_set, batch_size=args.batch_size, num_workers=args.workers)
 
+    print(f"Total number of sequences: {len(train_loader)}")
+
     # 构建模型
-    model = TrL.ResUNet()
+    model = TrL.TRUnet(hidden_dim=64)
     model.to(device)    
 
     # 选择损失函数
@@ -110,7 +116,7 @@ def main(args):
     # 设置学习率下降策略
     if args.useplateau: # 如果启用 ReduceLROnPlateau 调度器，根据验证损失自动调整学习率
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                               factor=0.1, patience=8, cooldown=2, mode='max')
+                                                               factor=0.1, patience=15, cooldown=5, mode='max')
     else:
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_step_size,
                                             gamma=args.lr_gamma)
@@ -148,7 +154,11 @@ def main(args):
             pkl_name = "checkpoint_{}.pth".format(epoch) if epoch == args.epochs - 1 else "checkpoint_best.pth"
             path_checkpoint = os.path.join(result_dir, pkl_name)
             torch.save(model.state_dict(), path_checkpoint)
-        print("now_IOU = {} , best_epoch = {}".format(miou_valid.avg, best_epoch))
+
+        current_model_path = os.path.join(result_dir, f"checkpoint_epoch_last.pth")
+        torch.save(model.state_dict(), current_model_path)
+
+        print("now_IOU = {} , best_epoch = {}".format(miou_valid.avg, best_epoch + 1))
 
 # 设置随机数种子，保证训练一致性
 def setup_seed(seed=42):

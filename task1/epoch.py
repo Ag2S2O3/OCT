@@ -20,8 +20,8 @@ class Epoch(object):
         # 开始训练
         model.train()   # 将模型设置为训练模式
         for _, data in enumerate(dataloader):
-            inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
+            inputs, labels  = data
+            inputs, labels = inputs.to(device), labels.to(device),
             outputs = model(inputs)
 
             # 使用优化器
@@ -32,7 +32,6 @@ class Epoch(object):
 
             # 计算指标（miou）
             outputs = (outputs.sigmoid() > 0.5).float() 
-            labels = labels.unsqueeze(dim=1)
             tp, fp, fn, tn = smp.metrics.get_stats(outputs.long(), labels, mode="binary")
             iou_score = smp.metrics.iou_score(tp, fp, fn, tn, reduction="macro-imagewise")  # 由于大量阴性图片的存在，因此macro-imagewise的iou要高，且合理
             acc = smp.metrics.accuracy(tp, fp, fn, tn, reduction="macro-imagewise")
@@ -67,12 +66,12 @@ class Epoch(object):
                 inputs, labels = data
                 inputs, labels = inputs.to(device), labels.to(device)
                 outputs = model(inputs)
+                
                 loss = loss_fn(outputs.cpu().squeeze(), labels.cpu())
 
                 # 计算指标（miou）
                 outputs = (outputs.sigmoid() > 0.5).float() 
 
-                labels = labels.unsqueeze(dim=1)
                 tp, fp, fn, tn = smp.metrics.get_stats(outputs.long(), labels, mode="binary")
                 iou_score = smp.metrics.iou_score(tp, fp, fn, tn, reduction="macro-imagewise")  # 由于大量阴性图片的存在，因此macro-imagewise的iou要高，且合理
                 acc = smp.metrics.accuracy(tp, fp, fn, tn, reduction="macro-imagewise")
